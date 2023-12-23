@@ -10,14 +10,7 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-const sequelize = new Sequelize(
-  "mysql://shivam:AVNS_bT31272yX3qyYuQyFFg@task-management-app-do-user-14624530-0.c.db.ondigitalocean.com:25060/defaultdb?",
-  {
-    host: "task-management-app-do-user-14624530-0.c.db.ondigitalocean.com",
-    dialect: "mysql",
-    pool: { max: 5, min: 0, idle: 10000 },
-  }
-);
+
 
 sequelize
   .authenticate()
