@@ -9,17 +9,15 @@ const app = express();
 
 require("dotenv").config({ path: "./config/.env" });
 
-
 app.use(cors());
 app.use(bodyParser.json());
 
-const sequelize = new Sequelize(`${process.env.DB_STRING}`,
-  {
-    host: `${process.env.HOST}`,
-    dialect: "mysql",
-    pool: { max: 5, min: 0, idle: 10000 },
-  }
-);
+//Db setup
+const sequelize = new Sequelize(`${process.env.DB_STRING}`, {
+  host: `${process.env.HOST}`,
+  dialect: "mysql",
+  pool: { max: 5, min: 0, idle: 10000 },
+});
 sequelize
   .authenticate()
   .then(() => {
@@ -29,6 +27,7 @@ sequelize
     console.log("error" + err);
   });
 
+//Models
 const User = sequelize.define(
   "user",
   {
@@ -81,14 +80,28 @@ const Subtask = sequelize.define(
   }
 );
 
-User.hasMany(Board);
-Board.hasMany(User);
+const Invite = sequelize.define("invite", {
+  inviterId: Sequelize.INTEGER,
+  inviteeId: Sequelize.INTEGER,
+  boardId: Sequelize.INTEGER,
+  status: Sequelize.STRING,
+});
+
+User.belongsToMany(Board, { through: "UserBoards" });
+Board.belongsToMany(User, { through: "UserBoards" });
 Board.hasMany(Column, { onDelete: "Cascade" });
 Board.hasMany(Task, { onDelete: "Cascade" });
 Column.belongsTo(Board);
 Task.belongsTo(Board);
 Task.hasMany(Subtask, { onDelete: "Cascade" });
 Subtask.belongsTo(Task);
+User.hasMany(Invite, { as: "SentInvites", foreignKey: "inviterId" });
+User.hasMany(Invite, { as: "ReceivedInvites", foreignKey: "inviteeId" });
+Board.hasMany(Invite, { foreignKey: "boardId" });
+
+Invite.belongsTo(User, { as: "Inviter", foreignKey: "inviterId" });
+Invite.belongsTo(User, { as: "Invitee", foreignKey: "inviteeId" });
+Invite.belongsTo(Board, { foreignKey: "boardId" });
 
 sequelize.sync();
 
@@ -126,36 +139,29 @@ app.post("/login", (req, res) => {
   });
 });
 
-// const authenticateToken = (req, res, next) => {
-//   const authHeader = req.headers['authorization'];
-//   const token = authHeader && authHeader.split(' ')[1];
+const authenticateToken = (req, res, next) => {
+  const token = req.headers.authorization;
 
-//   if (token == null) return res.sendStatus(401); // if there isn't any token
+  if (token == null) return res.redirect("/login");
 
-//   jwt.verify(token, 'secretKey', (err, user) => {
-//     if (err) return res.sendStatus(403);
+  jwt.verify(token, "secretKey", (err, user) => {
+    if (err) return res.redirect("/login");
 
-//     req.user = user;
-//     next(); // pass the execution off to whatever request the client intended
-//   });
-// };
-// You can then use this middleware in your routes like so:
-
-// JavaScript
-// AI-generated code. Review and use carefully. More info on FAQ.
-
-// app.put("/boards/:id", authenticateToken, async (req, res) => {
-//   // your code here
-// });
+    req.user = user;
+    next();
+  });
+};
 
 app.post("/boards", async (req, res) => {
   const { name, columns } = req.body;
   const token = req.headers.authorization;
-  console.log(token);
   const { userId } = jwt.verify(token, "secretKey");
 
   try {
-    const board = await Board.create({ name, userId });
+    const user = await User.findOne({ where: { id: userId } });
+    const board = await Board.create({ name });
+
+    await user.addBoard(board);
 
     const columnPromises = columns.map((column) => {
       console.log(column);
@@ -164,6 +170,35 @@ app.post("/boards", async (req, res) => {
     await Promise.all(columnPromises);
 
     res.json(board);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/boards", async (req, res) => {
+  const token = req.headers.authorization;
+  const { userId } = jwt.verify(token, "secretKey");
+
+  try {
+    const user = await User.findOne({
+      where: { id: userId },
+      include: {
+        model: Board,
+        include: [
+          { model: Column },
+          {
+            model: Task,
+            required: false,
+            include: [Subtask],
+          },
+        ],
+      },
+    });
+    if (user && user.boards) {
+      res.json(user.boards);
+    } else {
+      res.status(404).json({ error: "Board not found" });
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -212,7 +247,7 @@ app.put("/boards/:id", async (req, res) => {
   }
 });
 
-app.delete("/boards/:id", async (req, res) => {
+app.delete("/boards/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -266,13 +301,19 @@ app.put("/tasks/:id", async (req, res) => {
     task.status = status;
     await task.save();
 
-    const subTaskIds = subTasks.map(subtask => subtask.id).filter(id => id);
-    const subTasksToDelete = await Subtask.findAll({ where: { taskId: id, id: { [Sequelize.Op.notIn]: subTaskIds } } });
-    await Subtask.destroy({ where: { id: subTasksToDelete.map(subtask => subtask.id) } });
+    const subTaskIds = subTasks.map((subtask) => subtask.id).filter((id) => id);
+    const subTasksToDelete = await Subtask.findAll({
+      where: { taskId: id, id: { [Sequelize.Op.notIn]: subTaskIds } },
+    });
+    await Subtask.destroy({
+      where: { id: subTasksToDelete.map((subtask) => subtask.id) },
+    });
 
     const subTaskPromises = subTasks.map(async (subtask) => {
       if (subtask.id) {
-        const existingSubtask = await Subtask.findOne({ where: { id: subtask.id } });
+        const existingSubtask = await Subtask.findOne({
+          where: { id: subtask.id },
+        });
         if (existingSubtask) {
           existingSubtask.title = subtask.title;
           existingSubtask.completed = subtask.completed;
@@ -294,8 +335,7 @@ app.put("/tasks/:id", async (req, res) => {
   }
 });
 
-
-app.delete("/tasks/:id", async (req, res) => {
+app.delete("/tasks/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -312,29 +352,163 @@ app.delete("/tasks/:id", async (req, res) => {
   }
 });
 
-app.get("/boards", async (req, res) => {
+app.get("/users", async (req, res) => {
   const token = req.headers.authorization;
-  console.log(token);
   const { userId } = jwt.verify(token, "secretKey");
-  const { boardId } = req.query;
 
   try {
-    const boards = await Board.findAll({
-      where: { userId },
-      include: [
-        { model: Column },
-        {
-          model: Task,
-          where: { boardId },
-          required: false,
-          include: [Subtask],
-        },
-      ],
+    const user = await User.findOne({
+      where: { id: userId },
+      include: Board,
     });
-    res.json(boards);
+    if (user) {
+      res.json(user);
+    } else {
+      res.status(404).json({ error: "User not found" });
+    }
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.put("/users/:id", authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [updated] = await User.update(req.body, {
+      where: { id },
+    });
+    if (updated) {
+      const updatedUser = await User.findByPk(id);
+      res.status(200).json({ user: updatedUser });
+    } else {
+      res.status(404).json({ error: "User not found" });
+    }
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.delete("/users/:id", authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const deleted = await User.destroy({
+      where: { id },
+    });
+    if (deleted) {
+      res.status(204).send("User deleted");
+    } else {
+      res.status(404).json({ error: "User not found" });
+    }
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/invites", async (req, res) => {
+  const { inviterId, inviteeEmail, boardId } = req.body;
+
+  try {
+    const invitee = await User.findOne({ where: { email: inviteeEmail } });
+    if (!invitee) {
+      return res.status(404).json({ error: "Invitee not found" });
+    }
+
+    const invite = await Invite.create({
+      inviterId,
+      inviteeId: invitee.id,
+      boardId,
+      status: "pending",
+    });
+    res.json(invite);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.listen(process.env.PORT, () => console.log(`Server started on port ${process.env.PORT}`));
+// app.get("/invites/sent/:id", async (req, res) => {
+//   const { id } = req.params;
+//   console.log(id)
+
+//   try {
+//     const invites = await Invite.findAll({
+//       where: { inviterId: id },
+//       include: ["Inviter", "Invitee", {model: Board, attribute: ['name']}],
+//     });
+//     console.log(invites)
+//     res.json(invites);
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// });
+
+app.get("/invites/sent/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const invites = await Invite.findAll({
+      where: { inviterId: id },
+      include: [{ model: User, as: 'Inviter', attributes: ['username'] },
+      { model: User, as: 'Invitee', attributes: ['username'] },
+      { model: Board, attributes: ['name'] }],
+    });
+    res.json(invites);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+app.get("/invites/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const invites = await Invite.findAll({
+      where: { inviteeId: id },
+      include: [{ model: User, as: 'Inviter', attributes: ['username'] },
+      { model: User, as: 'Invitee', attributes: ['username'] },
+      { model: Board, attributes: ['name'] }],
+    });
+    res.json(invites);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put("/invites/:id/:task", async (req, res) => {
+  const { id, task } = req.params;
+
+  try {
+    const invite = await Invite.findOne({ where: { id } });
+    if (!invite) {
+      return res.status(404).json({ error: "Invite not found" });
+    }
+
+    if (task === "accept") {
+      invite.status = "accepted";
+      await invite.save();
+    } else if (task === "reject") {
+      invite.status = "rejected";
+      await invite.save();
+    }
+
+    const user = await User.findOne({ where: { id: invite.inviteeId } });
+    const board = await Board.findOne({ where: { id: invite.boardId } });
+
+    const memberships = await user.getBoards();
+    const isMember = memberships.some(
+      (membership) => membership.id === board.id
+    );
+
+    if (!isMember) {
+      await user.addBoard(board);
+    }
+
+    res.json(invite);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.listen(process.env.PORT, () =>
+  console.log(`Server started on port ${process.env.PORT}`)
+);
