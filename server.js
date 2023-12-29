@@ -425,31 +425,17 @@ app.post("/invites", async (req, res) => {
   }
 });
 
-// app.get("/invites/sent/:id", async (req, res) => {
-//   const { id } = req.params;
-//   console.log(id)
-
-//   try {
-//     const invites = await Invite.findAll({
-//       where: { inviterId: id },
-//       include: ["Inviter", "Invitee", {model: Board, attribute: ['name']}],
-//     });
-//     console.log(invites)
-//     res.json(invites);
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// });
-
 app.get("/invites/sent/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
     const invites = await Invite.findAll({
       where: { inviterId: id },
-      include: [{ model: User, as: 'Inviter', attributes: ['username'] },
-      { model: User, as: 'Invitee', attributes: ['username'] },
-      { model: Board, attributes: ['name'] }],
+      include: [
+        { model: User, as: "Inviter", attributes: ["username"] },
+        { model: User, as: "Invitee", attributes: ["username"] },
+        { model: Board, attributes: ["name"] },
+      ],
     });
     res.json(invites);
   } catch (err) {
@@ -457,16 +443,17 @@ app.get("/invites/sent/:id", async (req, res) => {
   }
 });
 
-
 app.get("/invites/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
     const invites = await Invite.findAll({
       where: { inviteeId: id },
-      include: [{ model: User, as: 'Inviter', attributes: ['username'] },
-      { model: User, as: 'Invitee', attributes: ['username'] },
-      { model: Board, attributes: ['name'] }],
+      include: [
+        { model: User, as: "Inviter", attributes: ["username"] },
+        { model: User, as: "Invitee", attributes: ["username"] },
+        { model: Board, attributes: ["name"] },
+      ],
     });
     res.json(invites);
   } catch (err) {
