@@ -9,7 +9,14 @@ const app = express();
 
 require("dotenv").config({ path: "./config/.env" });
 
-app.use(cors());
+const cors=require("cors");
+const corsOptions ={
+   origin:'*', 
+   credentials:true,        
+   optionSuccessStatus:200,
+}
+
+app.use(cors(corsOptions))
 app.use(bodyParser.json());
 
 //Db setup
