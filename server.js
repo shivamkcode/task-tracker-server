@@ -9,7 +9,11 @@ const app = express();
 
 require("dotenv").config({ path: "./config/.env" });
 
-app.use(cors())
+app.use(cors(x => x 
+  .AllowAnyMethod()
+  .AllowAnyHeader()
+  .SetIsOriginAllowed(origin => true) // allow any origin 
+  .AllowCredentials()))
 
 app.use(bodyParser.json());
 
@@ -106,11 +110,7 @@ Invite.belongsTo(Board, { foreignKey: "boardId" });
 
 sequelize.sync();
 
-app.UseCors(x => x
-  .AllowAnyMethod()
-  .AllowAnyHeader()
-  .SetIsOriginAllowed(origin => true) // allow any origin 
-  .AllowCredentials());
+
 
 app.post("/signup", async (req, res) => {
   const { username, email, password } = req.body;
