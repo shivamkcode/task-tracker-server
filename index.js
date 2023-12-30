@@ -4,6 +4,7 @@ const Sequelize = require("sequelize");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
 const cors = require("cors");
+const mysql2 = require("mysql2");
 
 const app = express();
 
@@ -18,6 +19,7 @@ const sequelize = new Sequelize(`${process.env.DB_STRING}`, {
   host: `${process.env.HOST}`,
   dialect: "mysql",
   pool: { max: 5, min: 0, idle: 10000 },
+  dialectModule: mysql2,
 });
 sequelize
   .authenticate()
@@ -499,9 +501,15 @@ app.put("/invites/:id/:task", async (req, res) => {
   }
 });
 
-app.listen(process.env.PORT, () =>
+app.get('health', (req, res) => {
+  res.send('ok')
+})
+
+app.get("/", (req, res) => {
+  res.send('ok')
+})
+
+app.listen(process.env.PORT || 3000, () =>
   console.log(`Server started on port ${process.env.PORT}`)
 );
 
-
-module.exports = app;
