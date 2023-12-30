@@ -9,11 +9,7 @@ const app = express();
 
 require("dotenv").config({ path: "./config/.env" });
 
-app.use(cors(x => x 
-  .AllowAnyMethod()
-  .AllowAnyHeader()
-  .SetIsOriginAllowed(origin => true) // allow any origin 
-  .AllowCredentials()))
+app.use(cors())
 
 app.use(bodyParser.json());
 
@@ -506,3 +502,6 @@ app.put("/invites/:id/:task", async (req, res) => {
 app.listen(process.env.PORT, () =>
   console.log(`Server started on port ${process.env.PORT}`)
 );
+
+
+module.exports = app;
