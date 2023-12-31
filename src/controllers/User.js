@@ -26,12 +26,14 @@ const login = async (req, res) => {
   const { email, password } = req.body;
 
   User.findOne({ where: { email } }).then(async (user) => {
-    if (await bcrypt.compare(password, user.password)) {
+    if (!user) {
+      res.status(403).json({ message: 'Email does not exist' });
+    } else if (await bcrypt.compare(password, user.password)) {
       jwt.sign({ userId: user.id }, "secretKey", (err, token) => {
         res.json({ token });
       });
     } else {
-      res.sendStatus(403);
+      res.status(403).json({ message: 'Password is incorrect' });
     }
   });
 };
