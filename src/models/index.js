@@ -4,7 +4,7 @@ const Column = require("./Column");
 const Task = require("./Task");
 const Subtask = require("./Subtask");
 const Invite = require("./Invite");
-
+ 
 User.belongsToMany(Board, { through: "UserBoards" });
 User.hasMany(Invite, { as: "SentInvites", foreignKey: "inviterId" });
 User.hasMany(Invite, { as: "ReceivedInvites", foreignKey: "inviteeId" });

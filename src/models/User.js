@@ -1,7 +1,6 @@
 const Sequelize = require("sequelize");
 const sequelize = require("../config/database");
 const bcrypt = require("bcrypt");
-const Board = require('./Board')
 
 const User = sequelize.define(
   "user",
@@ -20,6 +19,8 @@ const User = sequelize.define(
     },
   }
 );
+
+
 
 
 module.exports = User;
