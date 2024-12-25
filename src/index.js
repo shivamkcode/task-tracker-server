@@ -11,9 +11,18 @@ const inviteRoutes = require("./routes/inviteRoutes");
 
 require("dotenv").config({ path: "./config/.env" });
 
-app.use(cors())
-
+const corsOptions = {
+  origin: "*",
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
+  allowedHeaders: "Content-Type, Authorization",
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+  credentials: true,
+  exposedHeaders: "Access-Control-Allow-Private-Network",
+};
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
+app.options("*", cors(corsOptions));
 
 // Routes
 app.use("/", userRoutes);
