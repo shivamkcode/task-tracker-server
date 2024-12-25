@@ -4,13 +4,12 @@ const bcrypt = require("bcrypt");
 
 const signup = async (req, res) => {
   const { username, email, password } = req.body;
-
   const existingUser =
     (await User.findOne({ where: { email } })) ||
     (await User.findOne({ where: { username } }));
 
   if (existingUser) {
-    res.status(400).json({ error: "Email or username already exists" });
+    res.status(400).json({ message: "Email or username already exists" });
   } else {
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -27,13 +26,13 @@ const login = async (req, res) => {
 
   User.findOne({ where: { email } }).then(async (user) => {
     if (!user) {
-      res.status(403).json({ message: 'Email does not exist' });
+      res.status(404).json({ message: "Email does not exist" });
     } else if (await bcrypt.compare(password, user.password)) {
       jwt.sign({ userId: user.id }, "secretKey", (err, token) => {
         res.json({ token });
       });
     } else {
-      res.status(403).json({ message: 'Password is incorrect' });
+      res.status(400).json({ message: "Password is incorrect" });
     }
   });
 };
@@ -59,18 +58,28 @@ const getUser = async (req, res) => {
 
 const updateUser = async (req, res) => {
   const { id } = req.params;
+  const { oldPassword, newPassword } = req.body;
   try {
-    const [updated] = await User.update(req.body, {
-      where: { id },
-    });
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    if (oldPassword && newPassword) {
+      if (!(await bcrypt.compare(oldPassword, user.password))) {
+        return res.status(400).json({ error: "Old password is incorrect" });
+      }
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      req.body.password = hashedPassword;
+    }
+    const [updated] = await User.update(req.body, { where: { id } });
     if (updated) {
       const updatedUser = await User.findByPk(id);
-      res.status(200).json({ user: updatedUser });
+      return res.status(200).json({ user: updatedUser });
     } else {
-      res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ error: "User not found" });
     }
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: "Server error" });
   }
 };
 

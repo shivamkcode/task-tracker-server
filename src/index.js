@@ -22,7 +22,7 @@ app.use("/tasks", taskRoutes);
 app.use("/invites", inviteRoutes);
 
 sequelize
-  .sync()
+  .sync({})
   .then(() => {
     console.log("Connected to the database");
     app.listen(process.env.PORT, () => {

@@ -23,7 +23,6 @@ const sendInvite = async (req, res) => {
 
 const acceptRejectInvite = async (req, res) => {
   const { id, task } = req.params;
-  console.log(req)
   
   try {
     const invite = await Invite.findOne({ where: { id } });

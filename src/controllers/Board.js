@@ -28,8 +28,6 @@ const createBoard = async (req, res) => {
 const getBoards = async (req, res) => {
   const token = req.headers.authorization;
   const { userId } = jwt.verify(token, "secretKey");
-  console.log(token)
-  console.log(userId)
 
   try {
     const user = await User.findOne({

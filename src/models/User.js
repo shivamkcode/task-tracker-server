@@ -1,6 +1,5 @@
 const Sequelize = require("sequelize");
 const sequelize = require("../config/database");
-const bcrypt = require("bcrypt");
 
 const User = sequelize.define(
   "user",
@@ -8,14 +7,14 @@ const User = sequelize.define(
     username: Sequelize.STRING,
     email: Sequelize.STRING,
     password: Sequelize.STRING,
+    sampleBoardsCreated: {
+      type: Sequelize.BOOLEAN,
+      defaultValue: false,
+    },
   },
   {
     updatedAt: false,
   }
 );
 
-
-
-
 module.exports = User;
-
