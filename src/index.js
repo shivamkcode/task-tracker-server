@@ -11,17 +11,9 @@ const inviteRoutes = require("./routes/inviteRoutes");
 
 require("dotenv").config({ path: "./config/.env" });
 
-app.use(cors());
+app.use(cors())
 
 app.use(bodyParser.json());
-
-app.options("*", (req, res) => {
-  res.setHeader("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.setHeader("Access-Control-Allow-Private-Network", "true");
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.sendStatus(200);
-});
 
 // Routes
 app.use("/", userRoutes);
