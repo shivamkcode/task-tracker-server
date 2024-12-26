@@ -12,12 +12,15 @@ const inviteRoutes = require("./routes/inviteRoutes");
 
 require("dotenv").config({ path: "./config/.env" });
 
-// Helmet configuration
+// Helmet configuration for CSP
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://example.com"], // Add 'unsafe-inline' or use nonces/hashes
+      styleSrc: ["'self'", "'unsafe-inline'"], // Adjust as needed
+      imgSrc: ["'self'", "data:"], // Adjust as needed
+      connectSrc: ["'self'", "https://example.com"], // Allow connections to necessary origins
       // Add other directives as needed
     },
   },
@@ -31,7 +34,7 @@ const corsOptions = {
   preflightContinue: false,
   optionsSuccessStatus: 204,
   credentials: true,
-  exposedHeaders: "Access-Control-Allow-Private-Network",
+  exposedHeaders: "Access-Control-Allow-Private-Network"
 };
 
 app.use(cors(corsOptions));
