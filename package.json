@@ -24,6 +24,7 @@
     "express-session": "^1.17.3",
     "flash": "^1.1.0",
     "gauge": "^5.0.2",
+    "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "logger": "^0.0.1",
     "lru-cache": "^11.0.2",

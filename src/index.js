@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
+const helmet = require("helmet"); // Import Helmet
 const app = express();
 
 const sequelize = require("./config/database");
@@ -11,9 +12,33 @@ const inviteRoutes = require("./routes/inviteRoutes");
 
 require("dotenv").config({ path: "./config/.env" });
 
-app.use(cors())
+// Helmet configuration
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      // Add other directives as needed
+    },
+  },
+}));
 
+// CORS Configuration
+const corsOptions = {
+  origin: '*', // Specify allowed origins as needed
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
+  allowedHeaders: "Content-Type, Authorization",
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+  credentials: true,
+  exposedHeaders: "Access-Control-Allow-Private-Network",
+};
+
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
+
+// Handle OPTIONS requests globally
+app.options('*', cors(corsOptions));
 
 // Routes
 app.use("/", userRoutes);
