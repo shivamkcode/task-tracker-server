@@ -29,7 +29,6 @@
     "lru-cache": "^11.0.2",
     "method-override": "^3.0.0",
     "morgan": "^1.10.0",
-    "mysql2": "^3.6.5",
     "nodemon": "^3.0.2",
     "npmlog": "^7.0.1",
     "passport": "^0.7.0",
